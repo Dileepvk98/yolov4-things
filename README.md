@@ -48,3 +48,9 @@ dataset_folder<br>
 &emsp;  &emsp;  .<br>
 &emsp;  &emsp;  .<br>
 &emsp;  &emsp;  class_id, x_center, y_center, w, h<br>
+
+<br>
+<br>
+## Reference
+https://medium.com/analytics-vidhya/train-a-custom-yolov4-object-detector-using-google-colab-61a659d4868
+https://www.youtube.com/watch?v=mmj3nxGT2YQ
