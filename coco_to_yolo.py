@@ -1,17 +1,28 @@
 import json 
 import os
 import shutil
- 
-OUTPUT_DIR = 'custom_data'
-COCO_JSON_PATH = 'toy_human_coco.json'
-# INPUT_IMG_DIR = 'toy_human'
+import argparse
+from zipfile import ZipFile
 
-TRAIN_FILE_PATH = 'train.txt'
-TEST_FILE_PATH = 'test.txt'
-BKUP_PATH = '/saved_weights'
+from rename_fix import rename
+from train_test_split import train_test_split
 
+parser = argparse.ArgumentParser()
+parser.add_argument('--out', type=str, required=False, default='custom_data')
+parser.add_argument('--coco_json', type=str, required=True)
+parser.add_argument('--train_f', type=str, required=False, default='train.txt')
+parser.add_argument('--test_f', type=str, required=False, default='test.txt')
+parser.add_argument('--bkup', type=str, required=False, default='/saved_weights')
+parser.add_argument('--img_fmt', type=str, required=False, default=".jpg")
+args = parser.parse_args()
+
+OUTPUT_DIR = args.out
+COCO_JSON_PATH = args.coco_json
+TRAIN_FILE_PATH = args.train_f
+TEST_FILE_PATH = args.test_f
+BKUP_PATH = args.bkup
 # img_formats = ['.jpg', '.jpeg', '.png', '.bmp']
-img_format = ".jpg"
+img_format = args.img_fmt
 
 if os.path.exists(OUTPUT_DIR):
     if len(os.listdir(OUTPUT_DIR)) > 0:
@@ -62,17 +73,52 @@ for a in data['annotations']:
         print(e)
         skipped+=1
  
-with open('custom_data.names', 'w') as f:
+with open(OUTPUT_DIR+'.names', 'w') as f:
     f.writelines(c+'\n' for c in categories)
 
-with open('custom_data.data', 'w') as f:
+with open(OUTPUT_DIR+'.data', 'w') as f:
     f.write('classes = '+str(len(categories))+'\n')
     f.write('train = '+TRAIN_FILE_PATH+'\n')
     f.write('test = '+TEST_FILE_PATH+'\n')
-    f.write('names = custom_data.names\n')
+    f.write('names = '+OUTPUT_DIR+'.names\n')
     f.write('backup = '+BKUP_PATH+'\n')
 
 print('\ntotal converted : ',total)
 print('skipped due to error : ',skipped)
-print('\nrun rename_fix.py if file names are not continuos [optional]')
-print('run train_test_split.py to generate train and test files')
+
+# fixing filenames
+try:rename(OUTPUT_DIR, img_format)
+except Exception as e:print('error :',e)
+
+# splitting into train and test set 
+try:split = train_test_split(int(input('enter test data% [0-100] : ')), OUTPUT_DIR, img_format, TRAIN_FILE_PATH, TEST_FILE_PATH)
+except Exception as e:print('error : ',e);split = False
+
+print('creating zip file...')
+if os.path.exists(OUTPUT_DIR+'.zip'):
+    os.remove(OUTPUT_DIR+'.zip')
+    print('deleted existing '+OUTPUT_DIR+'.zip')
+
+# shutil.make_archive(OUTPUT_DIR+'.zip', 'zip', OUTPUT_DIR)
+with ZipFile(OUTPUT_DIR+'.zip', 'w') as zipObj:
+    for folderName, subfolders, filenames in os.walk(OUTPUT_DIR):
+       for filename in filenames:
+           filePath = os.path.join(folderName, filename)
+           zipObj.write(OUTPUT_DIR)
+           zipObj.write(os.path.join(OUTPUT_DIR, filename), os.path.join(OUTPUT_DIR,os.path.basename(filePath)))
+           
+    zipObj.write(OUTPUT_DIR+'.data')
+    zipObj.write(OUTPUT_DIR+'.names')
+    if split:
+        zipObj.write(TRAIN_FILE_PATH)
+        zipObj.write(TEST_FILE_PATH)
+    else:print('train, text.txt not found')
+        
+print('deleting excess files...')        
+os.remove(TRAIN_FILE_PATH)
+os.remove(TEST_FILE_PATH)
+os.remove(OUTPUT_DIR+'.names')
+os.remove(OUTPUT_DIR+'.data')
+shutil.rmtree(OUTPUT_DIR)
+
+print('done')
