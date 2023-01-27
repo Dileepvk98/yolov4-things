@@ -7,20 +7,20 @@ from zipfile import ZipFile
 from rename_fix import rename
 from train_test_split import train_test_split
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--out', type=str, required=False, default='custom_data')
-parser.add_argument('--coco_json', type=str, required=True)
-parser.add_argument('--train_f', type=str, required=False, default='train.txt')
-parser.add_argument('--test_f', type=str, required=False, default='test.txt')
-parser.add_argument('--bkup', type=str, required=False, default='/saved_weights')
-parser.add_argument('--img_fmt', type=str, required=False, default=".jpg")
+parser = argparse.ArgumentParser(description='convert coco format dataset to yolo v4/v3 format')
+parser.add_argument('--out_dir', type=str, required=False, default='custom_data', help='name of output zipfile')
+parser.add_argument('--coco_json', type=str, required=True, help='json file name of coco dataset')
+parser.add_argument('--train_f', type=str, required=False, default='train.txt', help='file containg path of img for trainig')
+parser.add_argument('--test_f', type=str, required=False, default='test.txt', help='file containg path of img for testing')
+parser.add_argument('--bkup_dir', type=str, required=False, default='saved_weights', help='dir name to save weights during training and resume')
+parser.add_argument('--img_fmt', type=str, required=False, default=".jpg", help='.jpg, .jpeg, .png, .bmp')
 args = parser.parse_args()
 
-OUTPUT_DIR = args.out
+OUTPUT_DIR = args.out_dir
 COCO_JSON_PATH = args.coco_json
 TRAIN_FILE_PATH = args.train_f
 TEST_FILE_PATH = args.test_f
-BKUP_PATH = args.bkup
+BKUP_PATH = args.bkup_dir
 # img_formats = ['.jpg', '.jpeg', '.png', '.bmp']
 img_format = args.img_fmt
 
@@ -49,23 +49,23 @@ cat_id_map = {c['name'] : c['id']-min_cat_id for c in data["categories"]}
 print(cat_id_map)
 categories = list(cat_id_map.keys())
 # print(categories)
-
 skipped = 0
 total = 0
 
+# convert 
+    # coco format  of  bbox = xmin, ymin, w, h
+    # to
+    # yolov4 format of bbox = xcenter, ycenter, w, h
 for a in data['annotations']:
     path = img_id_path_map[a["image_id"]][0]
     img_fn = img_id_path_map[a["image_id"]][1]
     category_id = a["category_id"]-min_cat_id
-    # coco format of bbox - xmin, ymin, w, h
     bbox = a['bbox']
     w, h = a['width'], a['height']
-           
     try:
         if not os.path.exists(os.path.join(OUTPUT_DIR, img_fn)):
             shutil.copyfile(path, os.path.join(OUTPUT_DIR, img_fn))
             with open(OUTPUT_DIR+'/'+img_fn.replace(img_format,".txt"), 'a') as f:
-                # yolov4 format of bbox = xcenter, ycenter, w, h
                 xc, yc = (bbox[0]+bbox[2]/2)/w, (bbox[1]+bbox[3]/2)/h
                 f.write(str(category_id)+" "+str(xc)+" "+str(yc)+" "+str(bbox[2]/w)+" "+str(bbox[3]/h)+"\n")
                 total+=1
@@ -73,6 +73,7 @@ for a in data['annotations']:
         print(e)
         skipped+=1
  
+# create config files 
 with open(OUTPUT_DIR+'.names', 'w') as f:
     f.writelines(c+'\n' for c in categories)
 
