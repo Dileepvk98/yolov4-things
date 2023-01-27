@@ -1,5 +1,7 @@
 # yolov4-things
 
+python coco_to_yolo.py --out_dir custom_data --coco_json coco.json --train_f train.txt --test_f test.txt --bkup_dir saved_weights --img_fmt .jpg
+
 ## Reference
 - https://medium.com/analytics-vidhya/train-a-custom-yolov4-object-detector-using-google-colab-61a659d4868
 - https://www.youtube.com/watch?v=mmj3nxGT2YQ
